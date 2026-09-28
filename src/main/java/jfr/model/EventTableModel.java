@@ -1,8 +1,11 @@
 package jfr.model;
 
-import javax.swing.table.*;
-import java.time.*;
-import java.util.*;
+import javax.swing.table.AbstractTableModel;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public final class EventTableModel extends AbstractTableModel {
 

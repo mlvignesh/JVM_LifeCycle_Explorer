@@ -1,6 +1,6 @@
 package jfr.content;
 
-import jfr.model.*;
+import jfr.model.Ev;
 
 public final class Explanations {
 

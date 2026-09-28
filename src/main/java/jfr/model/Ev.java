@@ -1,7 +1,7 @@
 package jfr.model;
 
-import java.time.*;
-import java.util.*;
+import java.time.Instant;
+import java.util.List;
 
 /** One row in the event log. */
 public final class Ev {

@@ -1,14 +1,34 @@
 package jfr.ui;
 
-import jfr.model.*;
+import jfr.model.Category;
+import jfr.model.Ev;
+import jfr.model.UiUtils;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.geom.*;
-import java.time.*;
-import java.util.*;
-import java.util.function.*;
+import javax.swing.JPanel;
+import javax.swing.JViewport;
+import javax.swing.ToolTipManager;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.Shape;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
+import java.awt.geom.Rectangle2D;
+import java.awt.geom.RoundRectangle2D;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 /** Swim-lane timeline: one lane per phase, time on the X axis. Click an event to inspect it. */
 public final class TimelinePanel extends JPanel {

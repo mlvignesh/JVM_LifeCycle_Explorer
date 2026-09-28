@@ -1,10 +1,20 @@
 package jfr.ui;
 
-import jfr.model.*;
+import jfr.model.Story;
+import jfr.model.UiUtils;
 
-import javax.swing.*;
-import java.awt.*;
-import java.util.*;
+import javax.swing.JPanel;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.RoundRectangle2D;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Draws Metaspace, Stack and Heap as three boxes. The box that just changed glows. */
 public final class BasicsPicture extends JPanel {

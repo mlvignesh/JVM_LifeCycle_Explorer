@@ -1,6 +1,6 @@
 package jfr.model;
 
-import java.awt.*;
+import java.awt.Color;
 
 public final class UiUtils {
 

@@ -1,7 +1,7 @@
 package jfr.content;
 
-import java.util.*;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public final class Examples {
 

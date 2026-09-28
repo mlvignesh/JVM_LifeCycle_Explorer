@@ -1,10 +1,16 @@
 package jfr.ui;
 
-import jfr.model.*;
+import jfr.model.UiUtils;
 
-import javax.swing.*;
-import java.awt.*;
-import java.util.*;
+import javax.swing.JPanel;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.util.List;
 
 /** Line chart of heap usage over time, with GC pauses and lifecycle steps marked. */
 public final class HeapPanel extends JPanel {
