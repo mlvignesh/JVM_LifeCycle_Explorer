@@ -22,6 +22,7 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -36,6 +37,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -118,68 +120,74 @@ public final class ProgramRunner {
 
         String mainName = detectMainClass(cfg.code);
         Path dir = Files.createTempDirectory("jvm_visualizer_");
-        Path src = dir.resolve(mainName + ".java");
-        Files.writeString(src, cfg.code);
+        try{
 
-        sink.status("Compiling " + mainName + ".java ...");
-        if (!compile(src, dir)) {
+            Path src = dir.resolve(mainName + ".java");
+            Files.writeString(src, cfg.code);
 
-            sink.status("Compilation failed - see Console");
-            return;
-        }
-        sink.compiled(dir, mainName, listClasses(dir, mainName));
+            sink.status("Compiling " + mainName + ".java ...");
+            if (!compile(src, dir)) {
 
-        PrintStream oldOut = System.out, oldErr = System.err;
-        PrintStream consoleStream = new PrintStream(new ConsoleStream(sink), true, StandardCharsets.UTF_8);
-        ScheduledExecutorService sampler = Executors.newSingleThreadScheduledExecutor(r -> {
+                sink.status("Compilation failed - see Console");
+                return;
+            }
+            sink.compiled(dir, mainName, listClasses(dir, mainName));
 
-            Thread t = new Thread(r, "heap-sampler");
-            t.setDaemon(true);
-            return t;
-        });
+            PrintStream oldOut = System.out, oldErr = System.err;
+            PrintStream consoleStream = new PrintStream(new ConsoleStream(sink), true, StandardCharsets.UTF_8);
+            ScheduledExecutorService sampler = Executors.newSingleThreadScheduledExecutor(r -> {
 
-        try (RecordingStream rs = new RecordingStream()) {
+                Thread t = new Thread(r, "heap-sampler");
+                t.setDaemon(true);
+                return t;
+            });
 
-            configure(rs);
-            rs.startAsync();
-            Thread.sleep(150);
+            try (RecordingStream rs = new RecordingStream()) {
 
-            sink.started(Instant.now(), loaderName);
-            sink.status("Running " + mainName + " ...");
-            sampler.scheduleAtFixedRate(() -> {
-                Runtime rt = Runtime.getRuntime();
-                long total = rt.totalMemory();
-                sink.heap(Instant.now(), total - rt.freeMemory(), total);
-            }, 0, 20, TimeUnit.MILLISECONDS);
+                configure(rs);
+                rs.startAsync();
+                Thread.sleep(150);
 
-            System.setOut(consoleStream);
-            System.setErr(consoleStream);
-            try {
-                runUser(dir, mainName, cfg);
+                sink.started(Instant.now(), loaderName);
+                sink.status("Running " + mainName + " ...");
+                sampler.scheduleAtFixedRate(() -> {
+                    Runtime rt = Runtime.getRuntime();
+                    long total = rt.totalMemory();
+                    sink.heap(Instant.now(), total - rt.freeMemory(), total);
+                }, 0, 20, TimeUnit.MILLISECONDS);
+
+                System.setOut(consoleStream);
+                System.setErr(consoleStream);
+                try {
+                    runUser(dir, mainName, cfg);
+                } finally {
+                    System.setOut(oldOut);
+                    System.setErr(oldErr);
+                }
+
+                if (cfg.forceGc && !stopRequested) {
+
+                    Instant t = Instant.now();
+                    milestone(Category.UNLOADING, "step-gc", "STEP 5 \u00b7 UNLOAD / GC", "System.gc()", t, 0,
+                            "Program finished and its class loader is now unreachable. Requesting a garbage collection - if it succeeds you will see the classes unloaded.");
+                    System.gc();
+                    Thread.sleep(300);
+                }
+                Thread.sleep(350);
+                sampler.shutdownNow();
+                rs.stop();
+                rs.awaitTermination(Duration.ofSeconds(3));
+                flushRuns();
             } finally {
+
+                sampler.shutdownNow();
                 System.setOut(oldOut);
                 System.setErr(oldErr);
             }
-
-            if (cfg.forceGc && !stopRequested) {
-
-                Instant t = Instant.now();
-                milestone(Category.UNLOADING, "step-gc", "STEP 5 \u00b7 UNLOAD / GC", "System.gc()", t, 0,
-                        "Program finished and its class loader is now unreachable. Requesting a garbage collection - if it succeeds you will see the classes unloaded.");
-                System.gc();
-                Thread.sleep(300);
-            }
-            Thread.sleep(350);
-            sampler.shutdownNow();
-            rs.stop();
-            rs.awaitTermination(Duration.ofSeconds(3));
-            flushRuns();
-        } finally {
-
-            sampler.shutdownNow();
-            System.setOut(oldOut);
-            System.setErr(oldErr);
+        }finally{
+            deleteDirectory(dir);
         }
+        
         sink.status("Done");
     }
 
@@ -231,6 +239,21 @@ public final class ProgramRunner {
                     .sorted().collect(Collectors.toCollection(ArrayList::new));
             if (names.remove(main)) names.add(0, main);
             return names;
+        }
+    }
+
+    public static void deleteDirectory(Path dir){
+
+        if(dir == null || !Files.exists(dir))
+            return;
+        try (Stream<Path> walk = Files.walk(dir)){
+
+            walk.sorted((Comparator.reverseOrder()))
+                .map(Path::toFile)
+                .forEach(File::delete);
+        }catch(Exception ignored){
+
+            dir.toFile().deleteOnExit();
         }
     }
 
